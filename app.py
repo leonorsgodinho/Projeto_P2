@@ -7,14 +7,13 @@ import seaborn as sns
 st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil") 
 sns.set_style("whitegrid")
 
-# --- Carregamento e Cache dos Dados ---
 @st.cache_data
 def load_data(file_path):
     """
     Carrega, limpa e padroniza os dados do CSV.
     """
-
     try:
+        # LER COM O SEPARADOR DE VÍRGULA E MOTOR PYTHON ROBUSTO
         df = pd.read_csv(
             file_path, 
             sep=',',
@@ -22,23 +21,24 @@ def load_data(file_path):
             on_bad_lines='skip'
         )
         
-        df.columns = df.columns.str.strip()
+        # --- Limpeza de Nomes de Colunas ---
+        df.columns = df.columns.str.strip() 
         
         # --- Limpeza e Transformação ---
         
-        # Converte 'date_start' para datetime
-        df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
+        # O nome da coluna agora é encontrado:
+        df['date_start'] = pd.to_datetime(df['date_start'].astype(str).str.strip(), errors='coerce')
         
-        # Limpar espaços e converter para numérico:
+        # Força numérico após remover espaços em branco em strings
         df['latitude'] = pd.to_numeric(df['latitude'].astype(str).str.strip(), errors='coerce')
         df['longitude'] = pd.to_numeric(df['longitude'].astype(str).str.strip(), errors='coerce')
         df['best_est'] = pd.to_numeric(df['best_est'].astype(str).str.strip(), errors='coerce')
 
-        # Limpar espaços na coluna de estados:
+        # Limpar espaços na coluna de estados (para que a seleção funcione)
         df['adm_1'] = df['adm_1'].astype(str).str.strip()
         
-        # Remove linhas sem data ou coordenadas
-        df = df.dropna(subset=['date_start', 'latitude', 'longitude'])
+        # Remove linhas sem dados cruciais
+        df = df.dropna(subset=['date_start', 'latitude', 'longitude', 'adm_1'])
         
         # Cria uma coluna 'month_year'
         df['month_year'] = df['date_start'].dt.to_period('M')
