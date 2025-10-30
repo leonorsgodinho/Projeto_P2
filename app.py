@@ -15,29 +15,28 @@ def load_data(file_path):
     """
 
     try:
-        # sep=';' -> Separador de colunas (necessário se o decimal for vírgula)
-        # decimal=',' -> Separador decimal (necessário para números brasileiros)
-        # engine='python' -> Essencial
-        # on_bad_lines='skip' -> Essencial
         df = pd.read_csv(
             file_path, 
-            sep=';', 
-            decimal=',', # Se os números estão com vírgula (ex: -2,529)
+            sep=',',
             engine='python', 
             on_bad_lines='skip'
         )
         
+        df.columns = df.columns.str.strip()
+        
         # --- Limpeza e Transformação ---
         
-        # Converte 'date_start' (agora encontrado) para datetime
+        # Converte 'date_start' para datetime
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
-        # Força colunas numéricas (transforma strings problemáticas em NaN)
-        # O separador decimal é o ponto por padrão (correto para lat/lon)
-        df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
-        df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
-        df['best_est'] = pd.to_numeric(df['best_est'], errors='coerce')
+        # Limpar espaços e converter para numérico:
+        df['latitude'] = pd.to_numeric(df['latitude'].astype(str).str.strip(), errors='coerce')
+        df['longitude'] = pd.to_numeric(df['longitude'].astype(str).str.strip(), errors='coerce')
+        df['best_est'] = pd.to_numeric(df['best_est'].astype(str).str.strip(), errors='coerce')
 
+        # Limpar espaços na coluna de estados:
+        df['adm_1'] = df['adm_1'].astype(str).str.strip()
+        
         # Remove linhas sem data ou coordenadas
         df = df.dropna(subset=['date_start', 'latitude', 'longitude'])
         
