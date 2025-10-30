@@ -13,15 +13,16 @@ def load_data(file_path):
     """
     Carrega, limpa e padroniza os dados do CSV.
     """
+
     try:
-        # PARÂMETROS FINAIS E ESSENCIAIS PARA ESTE ARQUIVO:
-        # sep=',' -> Separador de colunas (necessário para encontrar o cabeçalho)
-        # engine='python' -> Essencial para lidar com inconsistências de formatação.
-        # on_bad_lines='skip' -> Essencial para ignorar linhas malformadas (como a linha 188).
-        # REMOVEMOS QUOTING=3: Permite que o Pandas trate aspas duplas, corrigindo o KeyError.
+        # sep=';' -> Separador de colunas (necessário se o decimal for vírgula)
+        # decimal=',' -> Separador decimal (necessário para números brasileiros)
+        # engine='python' -> Essencial
+        # on_bad_lines='skip' -> Essencial
         df = pd.read_csv(
             file_path, 
-            sep=',',
+            sep=';', 
+            decimal=',', # Se os números estão com vírgula (ex: -2,529)
             engine='python', 
             on_bad_lines='skip'
         )
