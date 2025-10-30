@@ -3,37 +3,42 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
-
+sns.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
 sns.set_style("whitegrid")
 
 @st.cache_data
 def load_data(file_path):
     """
-    Carrega e limpa os dados do CSV.
+    Carrega, limpa e padroniza os dados do CSV.
     """
     try:
-        df = pd.read_csv(file_path, decimal=',', sep=';', engine='python', quoting=3)
+        df = pd.read_csv(
+            file_path, 
+            decimal=',', 
+            sep=';', 
+            engine='python', 
+            quoting=3,
+            doublequote=False # SOLUÇÃO PARA O ÚLTIMO PARSERERROR
+        )
+        
         
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
         df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
-
         df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
-        
         df['best_est'] = pd.to_numeric(df['best_est'], errors='coerce')
-        
-        df = df.dropna(subset=['date_start'])
+
+        df = df.dropna(subset=['date_start', 'latitude', 'longitude'])
         
         df['month_year'] = df['date_start'].dt.to_period('M')
 
-        df['best_est'] = pd.to_numeric(df['best_est'], errors='coerce')
-        
-        df = df.dropna(subset=['latitude', 'longitude'])
-
         return df
+    
+    except pd.errors.ParserError as e:
+        st.error(f"Erro Crítico de Leitura do CSV: Falha ao analisar o arquivo. Por favor, verifique se o arquivo '{file_path}' não tem linhas malformadas. Detalhes: {e}")
+        return None
     except FileNotFoundError:
-        st.error(f"Erro: Ficheiro '{file_path}' não encontrado. Certifique-se de que está na pasta.")
+        st.error(f"Erro: Arquivo '{file_path}' não encontrado. Certifique-se de que está na pasta.")
         return None
 
 df = load_data('brazil_conflicts_dataset.csv')
@@ -46,7 +51,7 @@ if df is not None:
     selected_states = st.sidebar.multiselect(
         "Selecione o(s) Estado(s) (adm_1):",
         options=all_states,
-        default=all_states  # Por defeito, todos estão selecionados
+        default=all_states
     )
 
     if selected_states:
@@ -55,8 +60,7 @@ if df is not None:
         df_filtered = df.copy()
 
     st.title("Dashboard: Análise de Conflitos no Brasil")
-    st.markdown("Aplicação web interativa para explorar o dataset `brazil_conflicts_dataset.csv`.")
-
+    
     total_events = len(df_filtered)
     total_deaths = int(df_filtered['best_est'].sum())
     
@@ -95,17 +99,18 @@ if df is not None:
 
     st.header("Mapa de Ocorrências")
     st.markdown("Visualização dos pontos de conflito (baseado nos filtros selecionados).")
-
+    
     df_map = df_filtered.dropna(subset=['latitude', 'longitude'])
 
-if not df_map.empty:
-    st.map(df_map[['latitude', 'longitude']])
-else:
-    st.warning("Não há dados de latitude/longitude válidos para os filtros selecionados.")
-    
+    if not df_map.empty:
+        st.map(df_map[['latitude', 'longitude']])
+    else:
+        st.warning("Não há dados de latitude/longitude válidos para os filtros selecionados.")
+
    
     if st.checkbox("Mostrar dados filtrados"):
         st.subheader("Dados Filtrados")
         st.dataframe(df_filtered)
-    else:
-        st.error("Não foi possível carregar os dados. A aplicação não pode continuar.")
+
+else:
+    st.error("A aplicação não pode continuar devido a um erro no carregamento dos dados.")
