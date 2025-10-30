@@ -18,7 +18,8 @@ def load_data(file_path):
             sep=';', 
             engine='python', 
             quoting=3,
-            doublequote=False # SOLUÇÃO PARA O ÚLTIMO PARSERERROR
+            doublequote=False
+            on_bad_lines='skip'
         )
         
         
