@@ -13,13 +13,15 @@ def load_data(file_path):
     Carrega e limpa os dados do CSV.
     """
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, decimal=',')
         
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
         df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
-        
+
         df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
+        
+        df['best_est'] = pd.to_numeric(df['best_est'], errors='coerce')
         
         df = df.dropna(subset=['date_start'])
         
