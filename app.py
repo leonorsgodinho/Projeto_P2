@@ -19,7 +19,7 @@ def load_data(file_path):
             on_bad_lines='skip'
         )
         
-        df.columns = df.columns.str.strip() 
+        df.columns = df.columns.str.strip()
         
         df['date_start'] = pd.to_datetime(df['date_start'].astype(str).str.strip(), errors='coerce')
         
