@@ -101,5 +101,5 @@ else:
     if st.checkbox("Mostrar dados filtrados"):
         st.subheader("Dados Filtrados")
         st.dataframe(df_filtered)
-else:
-    st.error("Não foi possível carregar os dados. A aplicação não pode continuar.")
+    else:
+        st.error("Não foi possível carregar os dados. A aplicação não pode continuar.")
