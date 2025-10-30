@@ -18,7 +18,7 @@ def load_data(file_path):
             sep=';', 
             engine='python', 
             quoting=3,
-            doublequote=False
+            doublequote=False,
             on_bad_lines='skip'
         )
         
