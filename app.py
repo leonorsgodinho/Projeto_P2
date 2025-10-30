@@ -30,9 +30,11 @@ st.dataframe(df_filtrado)
 if 'crime_type' in df_filtrado.columns:
     chart_data = df_filtrado.groupby('crime_type')['incidents'].sum().reset_index()
     fig = px.bar(
-        chart_data,
-        x='crime_type',
-        y='incidents',
-        color='crime_type',
-        text='incidents',
-        labels={'crime_type': 'Tipo de Crime', 'incident_
+    chart_data,
+    x='crime_type',
+    y='incidents',
+    color='crime_type',
+    text='incidents',
+    labels={'crime_type': 'Tipo de Crime', 'incidents': 'Número de Incidentes'}
+)
+
