@@ -1,48 +1,100 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Configuração da página
-st.set_page_config(page_title="Conflitos Organizados no Brasil", layout="wide")
-st.title("Estatísticas de Conflitos Organizados no Brasil")
+st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
 
-# Ler CSV
-df = pd.read_csv("data/brazil_conflicts_dataset.csv", low_memory=False)
+sns.set_style("whitegrid")
 
-# Mostrar colunas e primeiras linhas (debug)
-st.write("Colunas disponíveis:", df.columns)
-st.write(df.head())
+@st.cache_data
+def load_data(file_path):
+    """
+    Carrega e limpa os dados do CSV.
+    """
+    try:
+        df = pd.read_csv(file_path)
+        
+        df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
+        
+        df = df.dropna(subset=['date_start'])
+        
+        df['month_year'] = df['date_start'].dt.to_period('M')
 
-# Filtros
-estados_disponiveis = df['adm_1'].dropna().unique()
-estado_selecionado = st.sidebar.selectbox("Escolha um estado/região", estados_disponiveis)
+        df['best_est'] = pd.to_numeric(df['best_est'], errors='coerce')
+        
+        df = df.dropna(subset=['latitude', 'longitude'])
 
-anos_disponiveis = sorted(df['year'].dropna().unique())
-ano_selecionado = st.sidebar.select_slider(
-    "Escolha o ano",
-    options=anos_disponiveis,
-    value=anos_disponiveis[-1]
-)
+        return df
+    except FileNotFoundError:
+        st.error(f"Erro: Ficheiro '{file_path}' não encontrado. Certifique-se de que está na pasta.")
+        return None
 
-# Aplicar filtros
-df_filtrado = df[(df['adm_1'] == estado_selecionado) & (df['year'] == ano_selecionado)]
+df = load_data('brazil_conflicts_dataset.csv')
 
-# Mostrar tabela filtrada
-st.subheader(f"Dados de conflitos em {estado_selecionado} em {ano_selecionado}")
-st.dataframe(df_filtrado[['type_of_violence', 'best_est', 'deaths_a', 'deaths_b', 'deaths_civilians']])
+if df is not None:
+    
+    st.sidebar.header("Filtros Interativos")
 
-# Gráfico de barras — número de mortos por tipo de violência
-if 'type_of_violence' in df_filtrado.columns and 'best_est' in df_filtrado.columns:
-    chart_data = df_filtrado.groupby('type_of_violence')['best_est'].sum().reset_index()
-    fig = px.bar(
-        chart_data,
-        x='type_of_violence',
-        y='best_est',
-        color='type_of_violence',
-        text='best_est',
-        labels={'type_of_violence': 'Tipo de Violência', 'best_est': 'Número Estimado de Mortes'}
+    all_states = sorted(df['adm_1'].dropna().unique())
+    selected_states = st.sidebar.multiselect(
+        "Selecione o(s) Estado(s) (adm_1):",
+        options=all_states,
+        default=all_states  # Por defeito, todos estão selecionados
     )
-    fig.update_layout(showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+
+    if selected_states:
+        df_filtered = df[df['adm_1'].isin(selected_states)]
+    else:
+        df_filtered = df.copy()
+
+    st.title("Dashboard: Análise de Conflitos no Brasil")
+    st.markdown("Aplicação web interativa para explorar o dataset `brazil_conflicts_dataset.csv`.")
+
+    total_events = len(df_filtered)
+    total_deaths = int(df_filtered['best_est'].sum())
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Estados Selecionados", len(selected_states))
+    col2.metric("Total de Eventos", f"{total_events:,}")
+    col3.metric("Total de Mortes (best_est)", f"{total_deaths:,}")
+
+    st.header("Análise Temporal e Geográfica")
+
+    fig_col1, fig_col2 = st.columns(2)
+
+    with fig_col1:
+        st.subheader("Eventos de Conflito por Mês")
+        events_per_month = df_filtered.groupby('month_year').size().reset_index(name='total_events')
+        events_per_month['month_year'] = events_per_month['month_year'].dt.to_timestamp()
+        
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
+        sns.lineplot(data=events_per_month, x='month_year', y='total_events', color='blue', ax=ax1)
+        ax1.set_title('Total de Eventos por Mês')
+        ax1.set_xlabel('Data')
+        ax1.set_ylabel('Número de Eventos')
+        st.pyplot(fig1)
+
+    with fig_col2:
+        st.subheader("Total de Mortes por Mês")
+        deaths_per_month = df_filtered.groupby('month_year')['best_est'].sum().reset_index(name='total_deaths')
+        deaths_per_month['month_year'] = deaths_per_month['month_year'].dt.to_timestamp()
+        
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
+        sns.lineplot(data=deaths_per_month, x='month_year', y='total_deaths', color='red', ax=ax2)
+        ax2.set_title("Total de Mortes ('best_est') por Mês")
+        ax2.set_xlabel('Data')
+        ax2.set_ylabel('Número de Mortes')
+        st.pyplot(fig2)
+
+    st.header("Mapa de Ocorrências")
+    st.markdown("Visualização dos pontos de conflito (baseado nos filtros selecionados).")
+    
+    st.map(df_filtered[['latitude', 'longitude']])
+
+    if st.checkbox("Mostrar dados filtrados"):
+        st.subheader("Dados Filtrados")
+        st.dataframe(df_filtered)
+
 else:
-    st.warning("As colunas necessárias não foram encontradas no dataset.")
+    st.error("Não foi possível carregar os dados. A aplicação não pode continuar.")
