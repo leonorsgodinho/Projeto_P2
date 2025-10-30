@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-sns.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
+st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
 sns.set_style("whitegrid")
 
 @st.cache_data
