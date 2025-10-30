@@ -1,61 +1,38 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
 
 # Configuração da página
-st.set_page_config(page_title="Projeto P2 - Municípios Brasileiros", layout="wide")
-st.title("📊 Estatísticas Interativas de Municípios do Brasil")
+st.set_page_config(page_title="Violência no Brasil", layout="wide")
+st.title("Estatísticas de Violência no Brasil")
 
-st.sidebar.header("Filtros")
+# Ler CSV
+df = pd.read_csv("data/dados_violencia_br.csv", low_memory=False)
 
-# Lista de estados brasileiros
-estados = [
-    "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
-    "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
-    "RS","RO","RR","SC","SP","SE","TO"
-]
+# Mostrar colunas disponíveis (para debug, podes remover depois)
+st.write("Colunas disponíveis:", df.columns)
 
-# Seleção de estado
-estado_selecionado = st.sidebar.selectbox("Escolha um estado", estados)
+# Filtros
+estados_disponiveis = df['state'].dropna().unique()
+estado_selecionado = st.sidebar.selectbox("Escolha um estado", estados_disponiveis)
 
-# Chamada à API
-url = f"https://brasilapi.com.br/api/ibge/municipios/v1/{estado_selecionado}"
-try:
-    response = requests.get(url)
-    response.raise_for_status()
-    data = response.json()
-    df = pd.json_normalize(data)
-except Exception as e:
-    st.error(f"Erro ao carregar dados da API: {e}")
-    df = pd.DataFrame()
+anos_disponiveis = sorted(df['year'].dropna().unique())
+ano_selecionado = st.sidebar.select_slider("Escolha o ano", options=anos_disponiveis, value=anos_disponiveis[-1])
 
-if not df.empty:
-    # Criar coluna Microrregiao com valor padrão se faltar
-    if "microrregiao" in df.columns:
-        df["Microrregiao"] = df["microrregiao"].apply(
-            lambda x: x["nome"] if isinstance(x, dict) and "nome" in x else "Desconhecida"
-        )
-    else:
-        df["Microrregiao"] = "Desconhecida"
+# Aplicar filtros
+df_filtrado = df[(df['state'] == estado_selecionado) & (df['year'] == ano_selecionado)]
 
-    # Mostrar tabela
-    st.subheader(f"Municípios do estado de {estado_selecionado}")
-    colunas_para_mostrar = [col for col in ["nome", "id", "Microrregiao"] if col in df.columns]
-    st.dataframe(df[colunas_para_mostrar])
+# Mostrar tabela
+st.subheader(f"Dados de violência em {estado_selecionado} em {ano_selecionado}")
+st.dataframe(df_filtrado)
 
-    # Gráfico de barras
-    st.subheader("Número de Municípios por Microrregião")
-    chart_data = df.groupby("Microrregiao").size().reset_index(name="Número de Municípios")
+# Gráfico de barras — número de incidentes por tipo de crime
+if 'crime_type' in df_filtrado.columns:
+    chart_data = df_filtrado.groupby('crime_type')['incidents'].sum().reset_index()
     fig = px.bar(
         chart_data,
-        x="Microrregiao",
-        y="Número de Municípios",
-        color="Microrregiao",
-        text="Número de Municípios"
-    )
-    fig.update_layout(showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
-
-else:
-    st.warning("Não foi possível obter dados para este estado. Tente novamente.")
+        x='crime_type',
+        y='incidents',
+        color='crime_type',
+        text='incidents',
+        labels={'crime_type': 'Tipo de Crime', 'incident_
