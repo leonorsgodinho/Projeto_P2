@@ -14,12 +14,11 @@ def load_data(file_path):
     try:
         df = pd.read_csv(
             file_path, 
+            decimal=',', 
+            sep=';', 
             engine='python', 
-            quoting=3,
-            doublequote=False,
             on_bad_lines='skip'
-        )
-        
+        )      
         
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
