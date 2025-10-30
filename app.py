@@ -17,6 +17,10 @@ def load_data(file_path):
         
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
+        df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
+        
+        df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
+        
         df = df.dropna(subset=['date_start'])
         
         df['month_year'] = df['date_start'].dt.to_period('M')
