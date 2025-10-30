@@ -13,7 +13,7 @@ def load_data(file_path):
     Carrega e limpa os dados do CSV.
     """
     try:
-        df = pd.read_csv(file_path, decimal=',')
+        df = pd.read_csv(file_path, decimal=',', sep=';')
         
         df['date_start'] = pd.to_datetime(df['date_start'], errors='coerce')
         
