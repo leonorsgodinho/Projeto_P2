@@ -7,7 +7,8 @@ st.set_page_config(page_title="Violência no Brasil", layout="wide")
 st.title("Estatísticas de Violência no Brasil")
 
 # Ler CSV
-df = pd.read_csv("data/dados_violencia_br.csv", low_memory=False)
+df = pd.read_csv("data/brazil_conflicts_dataset.csv", low_memory=False)
+
 
 # Mostrar colunas disponíveis (para debug, podes remover depois)
 st.write("Colunas disponíveis:", df.columns)
