@@ -89,9 +89,15 @@ if df is not None:
 
     st.header("Mapa de Ocorrências")
     st.markdown("Visualização dos pontos de conflito (baseado nos filtros selecionados).")
-    
-    st.map(df_filtered[['latitude', 'longitude']])
 
+    df_map = df_filtered.dropna(subset=['latitude', 'longitude'])
+
+if not df_map.empty:
+    st.map(df_map[['latitude', 'longitude']])
+else:
+    st.warning("Não há dados de latitude/longitude válidos para os filtros selecionados.")
+    
+   
     if st.checkbox("Mostrar dados filtrados"):
         st.subheader("Dados Filtrados")
         st.dataframe(df_filtered)
