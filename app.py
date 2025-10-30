@@ -12,25 +12,33 @@ def load_data(file_path):
     Carrega, limpa e padroniza os dados do CSV.
     """
     try:
-            df = pd.read_csv(
+        df = pd.read_csv(
             file_path, 
             sep=',',
             engine='python', 
             on_bad_lines='skip'
         )
         
-        df.columns = df.columns.str.strip
+        # --- Limpeza de Nomes de Colunas (8 ESPAÇOS AQUI) ---
+        df.columns = df.columns.str.strip() 
         
+        # --- Limpeza e Transformação (8 ESPAÇOS AQUI) ---
+        
+        # O nome da coluna agora é encontrado:
         df['date_start'] = pd.to_datetime(df['date_start'].astype(str).str.strip(), errors='coerce')
         
+        # Força numérico após remover espaços em branco em strings
         df['latitude'] = pd.to_numeric(df['latitude'].astype(str).str.strip(), errors='coerce')
         df['longitude'] = pd.to_numeric(df['longitude'].astype(str).str.strip(), errors='coerce')
         df['best_est'] = pd.to_numeric(df['best_est'].astype(str).str.strip(), errors='coerce')
 
+        # Limpar espaços na coluna de estados
         df['adm_1'] = df['adm_1'].astype(str).str.strip()
         
+        # Remove linhas sem dados cruciais
         df = df.dropna(subset=['date_start', 'latitude', 'longitude', 'adm_1'])
         
+        # Cria uma coluna 'month_year'
         df['month_year'] = df['date_start'].dt.to_period('M')
 
         return df
