@@ -1,109 +1,65 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
 
-st.set_page_config(layout="wide", page_title="Conflitos no Brasil — Dashboard")
-sns.set_style("whitegrid")
+st.set_page_config(page_title="Conflitos no Brasil", layout="wide")
 
-@st.cache_data
-def load_data(path):
-    df = pd.read_csv(
-            file_path,
-            sep=",",
-            engine="python",
-            on_bad_lines="skip"
-        )
+st.title("📊 Análise de Conflitos no Brasil")
 
-    df.columns = df.columns.str.strip()
+# Carregar os dados
+df = pd.read_csv("brazil_conflicts_dataset.csv")
 
-    df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
-    df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
-    df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
-    df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
+# Converter datas corretamente
+df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
+df["date_end"] = pd.to_datetime(df["date_end"], errors="coerce")
 
-    df = df.dropna(subset=["date_start", "latitude", "longitude"])
+# Remover linhas sem latitude ou longitude
+df = df.dropna(subset=["latitude", "longitude"])
 
-    df["month_year"] = df["date_start"].dt.to_period("M")
+# Seletor de anos
+anos_disponiveis = sorted(df["year"].dropna().unique())
+ano_selecionado = st.sidebar.selectbox("Selecionar ano:", anos_disponiveis)
 
-    return df
+df_filtrado = df[df["year"] == ano_selecionado]
 
-    except Exception as e:
-        st.error(f"Erro ao carregar o CSV: {e}")
-        return None
+# Mostrar métricas
+st.subheader(f"Resultados para {ano_selecionado}")
 
-df = load_data("brazil_conflicts_dataset.csv")
+col1, col2, col3 = st.columns(3)
+col1.metric("Total de ocorrências", len(df_filtrado))
+col2.metric("Mortes", int(df_filtrado["fatalities"].sum()))
+col3.metric("Feridos", int(df_filtrado["injuries"].sum()))
 
-if df is None:
-    st.stop()
+# Gráfico de barras
+st.subheader("Número de conflitos por tipo")
 
-st.title("📊 Dashboard: Análise de Conflitos no Brasil (1993–2024)")
+if "type" in df_filtrado.columns:
+    conflitos_tipo = df_filtrado["type"].value_counts().reset_index()
+    conflitos_tipo.columns = ["tipo", "ocorrencias"]
 
-total_events = len(df)
-total_deaths = int(df["best_est"].sum())
+    fig_bar = px.bar(
+        conflitos_tipo,
+        x="tipo",
+        y="ocorrencias",
+        title="Conflitos por tipo",
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+else:
+    st.error("A coluna 'type' não existe no dataset.")
 
-col1, col2 = st.columns(2)
-col1.metric("Total de Eventos", f"{total_events:,}")
-col2.metric("Total de Mortes (best_est)", f"{total_deaths:,}")
-
-st.subheader("📈 Eventos de Conflito por Mês")
-
-events_per_month = (
-    df.groupby("month_year")
-    .size()
-    .reset_index(name="total_events")
-)
-events_per_month["month_year"] = events_per_month["month_year"].dt.to_timestamp()
-
-fig1, ax1 = plt.subplots(figsize=(12, 4))
-sns.lineplot(data=events_per_month, x="month_year", y="total_events", ax=ax1)
-ax1.set_title("Total de Eventos por Mês")
-ax1.set_xlabel("Data")
-ax1.set_ylabel("Número de Eventos")
-st.pyplot(fig1)
-
-st.subheader("📉 Total de Mortes por Mês")
-
-deaths_per_month = (
-    df.groupby("month_year")["best_est"]
-    .sum()
-    .reset_index(name="total_deaths")
-)
-deaths_per_month["month_year"] = deaths_per_month["month_year"].dt.to_timestamp()
-
-fig2, ax2 = plt.subplots(figsize=(12, 4))
-sns.lineplot(data=deaths_per_month, x="month_year", y="total_deaths", ax=ax2, color="red")
-ax2.set_title("Total de Mortes por Mês")
-ax2.set_xlabel("Data")
-ax2.set_ylabel("Número de Mortes")
-st.pyplot(fig2)
-
-
-st.markdown("---")
-
-st.subheader("🗺️ Mapa de Ocorrências no Brasil")
-
-df_map = df.dropna(subset=["latitude", "longitude"])
+# Mapa
+st.subheader("Mapa das ocorrências")
 
 fig_map = px.scatter_mapbox(
-    df_map,
+    df_filtrado,
     lat="latitude",
     lon="longitude",
-    hover_name="adm_1",
-    hover_data=["date_start", "best_est"],
+    color="fatalities",
+    size="fatalities",
+    hover_name="location",
     zoom=3,
-    height=550
+    height=600,
 )
 
 fig_map.update_layout(mapbox_style="open-street-map")
-fig_map.update_layout(margin={"r":0, "t":0, "l":0, "b":0})
-
 st.plotly_chart(fig_map, use_container_width=True)
-
-
-st.markdown("---")
-
-if st.checkbox("Mostrar tabela completa do dataset"):
-    st.subheader("📄 Dados Completos")
-    st.dataframe(df, use_container_width=True)
