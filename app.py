@@ -28,9 +28,10 @@ def load_data(path):
     df["month_year"] = df["date_start"].dt.to_period("M")
 
     return df
-except Exception as e:
-    st.error(f"Erro ao carregar o CSV: {e}")
-    return None
+
+    except Exception as e:
+        st.error(f"Erro ao carregar o CSV: {e}")
+        return None
 
 df = load_data("brazil_conflicts_dataset.csv")
 
