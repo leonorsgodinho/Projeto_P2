@@ -18,10 +18,10 @@ def load_data(path):
 
     df.columns = df.columns.str.strip()
 
-   df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
-        df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
-        df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
-        df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
+    df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
+    df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+    df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
+    df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
 
     df = df.dropna(subset=["date_start", "latitude", "longitude"])
 
