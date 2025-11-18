@@ -40,6 +40,12 @@ def load_data(file_path):
 
 df = load_data("brazil_conflicts_dataset.csv")
 
+# --- DEBUG: VERIFICAR O CONTEÚDO DO CSV ---
+st.subheader("DEBUG - Primeiras linhas do CSV")
+st.write("Colunas:", df.columns.tolist())
+st.write(df.head(10))
+# -------------------------------------------
+
 if df is not None:
 
     st.title("Dashboard: Conflitos Armados no Brasil")
