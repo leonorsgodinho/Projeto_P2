@@ -14,7 +14,14 @@ sns.set_style("whitegrid")
 @st.cache_data
 def load_data(file_path):
     try:
-        df = pd.read_csv(file_path, sep=",", engine="python", on_bad_lines="skip")
+        df = pd.read_csv(
+            file_path,
+            sep=",",
+            encoding="latin1",          
+            engine="python",
+            on_bad_lines="skip"
+        )        
+
         
         # Limpeza básica
         df.columns = df.columns.str.strip()
