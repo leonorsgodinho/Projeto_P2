@@ -87,4 +87,6 @@ if not df_filtered[["latitude", "longitude"]].dropna().empty:
         color="best_est",
         size="best_est",
         zoom=3,
-        height=
+        height=500
+  )
+fig_map.update_layout(mapbox_style="open-street-map")
