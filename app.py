@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 
+import os
+st.write("Ficheiros disponíveis no diretório atual:")
+st.write(os.listdir("."))
+
 st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
 sns.set_style("whitegrid")
 
