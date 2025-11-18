@@ -1,120 +1,90 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 
-st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil") 
-sns.set_style("whitegrid")
+st.set_page_config(
+    layout="wide",
+    page_title="Análise de Conflitos no Brasil"
+)
 
 @st.cache_data
-def load_data(file_path):
-    """
-    Carrega, limpa e padroniza os dados do CSV.
-    """
-    try:
-        df = pd.read_csv(
-            file_path, 
-            sep=',',
-            engine='python', 
-            on_bad_lines='skip'
-        )
-        
-        # --- Limpeza de Nomes de Colunas (8 ESPAÇOS AQUI) ---
-        df.columns = df.columns.str.strip() 
-        
-        # --- Limpeza e Transformação (8 ESPAÇOS AQUI) ---
-        
-        # O nome da coluna agora é encontrado:
-        df['date_start'] = pd.to_datetime(df['date_start'].astype(str).str.strip(), errors='coerce')
-        
-        # Força numérico após remover espaços em branco em strings
-        df['latitude'] = pd.to_numeric(df['latitude'].astype(str).str.strip(), errors='coerce')
-        df['longitude'] = pd.to_numeric(df['longitude'].astype(str).str.strip(), errors='coerce')
-        df['best_est'] = pd.to_numeric(df['best_est'].astype(str).str.strip(), errors='coerce')
+def load_data(path):
+    df = pd.read_csv(path, sep=',', engine='python', on_bad_lines='skip')
 
-        # Limpar espaços na coluna de estados
-        df['adm_1'] = df['adm_1'].astype(str).str.strip()
-        
-        # Remove linhas sem dados cruciais
-        df = df.dropna(subset=['date_start', 'latitude', 'longitude', 'adm_1'])
-        
-        # Cria uma coluna 'month_year'
-        df['month_year'] = df['date_start'].dt.to_period('M')
+    df.columns = df.columns.str.strip()
 
-        return df
-    
-    except Exception as e:
-        st.error(f"Erro Crítico de Leitura do CSV: Falha ao carregar o arquivo. Detalhes: {e}")
-        return None
+    df["date_start"] = pd.to_datetime(df["date_start"].astype(str).str.strip(), errors="coerce")
+    df["latitude"] = pd.to_numeric(df["latitude"].astype(str).str.strip(), errors="coerce")
+    df["longitude"] = pd.to_numeric(df["longitude"].astype(str).str.strip(), errors="coerce")
+    df["best_est"] = pd.to_numeric(df["best_est"].astype(str).str.strip(), errors="coerce").fillna(0)
+    df["adm_1"] = df["adm_1"].astype(str).str.strip()
 
-df = load_data('brazil_conflicts_dataset.csv')
+    df = df.dropna(subset=["date_start", "latitude", "longitude", "adm_1"])
 
-if df is not None:
-    
-    st.sidebar.header("Filtros Interativos")
+    df["month_year"] = df["date_start"].dt.to_period("M").dt.to_timestamp()
 
-    all_states = sorted(df['adm_1'].dropna().unique())
-    selected_states = st.sidebar.multiselect(
-        "Selecione o(s) Estado(s) (adm_1):",
-        options=all_states,
-        default=all_states
-    )
+    return df
 
-    if selected_states:
-        df_filtered = df[df['adm_1'].isin(selected_states)]
-    else:
-        df_filtered = df.copy()
+df = load_data("brazil_conflicts_dataset.csv")
 
-    st.title("Dashboard: Análise de Conflitos no Brasil")
-    
-    total_events = len(df_filtered)
-    total_deaths = int(df_filtered['best_est'].sum())
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Estados Selecionados", len(selected_states))
-    col2.metric("Total de Eventos", f"{total_events:,}")
-    col3.metric("Total de Mortes (best_est)", f"{total_deaths:,}")
+st.sidebar.header("Filtros")
 
-    st.header("Análise Temporal e Geográfica")
+states = sorted(df["adm_1"].unique())
 
-    fig_col1, fig_col2 = st.columns(2)
+selected_states = st.sidebar.multiselect(
+    "Seleciona Estado(s):",
+    options=states,
+    default=states
+)
 
-    with fig_col1:
-        st.subheader("Eventos de Conflito por Mês")
-        events_per_month = df_filtered.groupby('month_year').size().reset_index(name='total_events')
-        events_per_month['month_year'] = events_per_month['month_year'].dt.to_timestamp()
-        
-        fig1, ax1 = plt.subplots(figsize=(10, 4))
-        sns.lineplot(data=events_per_month, x='month_year', y='total_events', ax=ax1)
-        ax1.set_title('Total de Eventos por Mês')
-        ax1.set_xlabel('Data')
-        ax1.set_ylabel('Número de Eventos')
-        st.pyplot(fig1)
+df_filtered = df[df["adm_1"].isin(selected_states)] if selected_states else df.copy()
 
-    with fig_col2:
-        st.subheader("Total de Mortes por Mês")
-        deaths_per_month = df_filtered.groupby('month_year')['best_est'].sum().reset_index(name='total_deaths')
-        deaths_per_month['month_year'] = deaths_per_month['month_year'].dt.to_timestamp()
-        
-        fig2, ax2 = plt.subplots(figsize=(10, 4))
-        sns.lineplot(data=deaths_per_month, x='month_year', y='total_deaths', color='red', ax=ax2)
-        ax2.set_title("Total de Mortes ('best_est') por Mês")
-        ax2.set_xlabel('Data')
-        ax2.set_ylabel('Número de Mortes')
-        st.pyplot(fig2)
+total_events = len(df_filtered)
+total_deaths = int(df_filtered["best_est"].sum())
 
-    st.header("Mapa de Ocorrências")
-    
-    df_map = df_filtered.dropna(subset=['latitude', 'longitude'])
+st.title("Dashboard: Conflitos no Brasil (1993–2024)")
 
-    if not df_map.empty:
-        st.map(df_map[['latitude', 'longitude']])
-    else:
-        st.warning("Não há dados de latitude/longitude válidos para os filtros selecionados.")
+col1, col2, col3 = st.columns(3)
 
-    if st.checkbox("Mostrar dados filtrados"):
-        st.subheader("Dados Filtrados")
-        st.dataframe(df_filtered)
+col1.metric("Estados Selecionados", len(selected_states))
+col2.metric("Total de Eventos", f"{total_events:,}")
+col3.metric("Total de Mortes Estimadas (best_est)", f"{total_deaths:,}")
 
-else:
-    st.error("A aplicação não pode continuar devido a um erro no carregamento dos dados.")
+st.header("Evolução Temporal")
+
+events_month = df_filtered.groupby("month_year").size().reset_index(name="total_events")
+
+fig_events = px.line(
+    events_month,
+    x="month_year",
+    y="total_events",
+    markers=True,
+    title="Eventos de Conflito por Mês"
+)
+
+st.plotly_chart(fig_events, use_container_width=True)
+
+deaths_month = df_filtered.groupby("month_year")["best_est"].sum().reset_index(name="total_deaths")
+
+fig_deaths = px.line(
+    deaths_month,
+    x="month_year",
+    y="total_deaths",
+    markers=True,
+    title="Mortes Estimadas por Mês"
+)
+
+st.plotly_chart(fig_deaths, use_container_width=True)
+
+
+st.header("Mapa de Ocorrências")
+
+if not df_filtered[["latitude", "longitude"]].dropna().empty:
+    fig_map = px.scatter_mapbox(
+        df_filtered,
+        lat="latitude",
+        lon="longitude",
+        color="best_est",
+        size="best_est",
+        zoom=3,
+        height=
