@@ -1,65 +1,114 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 import plotly.express as px
 
-st.set_page_config(page_title="Conflitos no Brasil", layout="wide")
+st.set_page_config(layout="wide", page_title="Análise de Conflitos no Brasil")
+sns.set_style("whitegrid")
 
-st.title("📊 Análise de Conflitos no Brasil")
+@st.cache_data
+def load_data(file_path):
+    try:
+        df = pd.read_csv(file_path, sep=",", engine="python", on_bad_lines="skip")
+        
+        # Limpeza básica
+        df.columns = df.columns.str.strip()
 
-# Carregar os dados
-df = pd.read_csv("brazil_conflicts_dataset.csv")
+        # Datas
+        df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
 
-# Converter datas corretamente
-df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
-df["date_end"] = pd.to_datetime(df["date_end"], errors="coerce")
+        # Coordenadas
+        df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+        df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
 
-# Remover linhas sem latitude ou longitude
-df = df.dropna(subset=["latitude", "longitude"])
+        # Mortes (best_est)
+        df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
 
-# Seletor de anos
-anos_disponiveis = sorted(df["year"].dropna().unique())
-ano_selecionado = st.sidebar.selectbox("Selecionar ano:", anos_disponiveis)
+        # Remove linhas essenciais nulas
+        df = df.dropna(subset=["date_start", "latitude", "longitude"])
 
-df_filtrado = df[df["year"] == ano_selecionado]
+        # Criação da coluna mês-ano
+        df["month_year"] = df["date_start"].dt.to_period("M")
 
-# Mostrar métricas
-st.subheader(f"Resultados para {ano_selecionado}")
+        return df
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Total de ocorrências", len(df_filtrado))
-col2.metric("Mortes", int(df_filtrado["fatalities"].sum()))
-col3.metric("Feridos", int(df_filtrado["injuries"].sum()))
+    except Exception as e:
+        st.error(f"Erro ao carregar CSV: {e}")
+        return None
 
-# Gráfico de barras
-st.subheader("Número de conflitos por tipo")
 
-if "type" in df_filtrado.columns:
-    conflitos_tipo = df_filtrado["type"].value_counts().reset_index()
-    conflitos_tipo.columns = ["tipo", "ocorrencias"]
+df = load_data("brazil_conflicts_dataset.csv")
 
-    fig_bar = px.bar(
-        conflitos_tipo,
-        x="tipo",
-        y="ocorrencias",
-        title="Conflitos por tipo",
+if df is not None:
+
+    st.title("Dashboard: Conflitos Armados no Brasil")
+
+    # KPIs gerais
+    total_eventos = len(df)
+    total_mortes = int(df["best_est"].sum())
+
+    col1, col2 = st.columns(2)
+    col1.metric("Total de Eventos", f"{total_eventos:,}")
+    col2.metric("Total de Mortes (best_est)", f"{total_mortes:,}")
+
+    # --------------------------
+    # GRÁFICOS TEMPORAIS
+    # --------------------------
+
+    st.header("Análise Temporal")
+
+    eventos_mes = df.groupby("month_year").size().reset_index(name="total_eventos")
+    eventos_mes["month_year"] = eventos_mes["month_year"].dt.to_timestamp()
+
+    mortes_mes = df.groupby("month_year")["best_est"].sum().reset_index(name="total_mortes")
+    mortes_mes["month_year"] = mortes_mes["month_year"].dt.to_timestamp()
+
+    fig_col1, fig_col2 = st.columns(2)
+
+    with fig_col1:
+        st.subheader("Eventos por Mês")
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
+        sns.lineplot(data=eventos_mes, x="month_year", y="total_eventos", ax=ax1)
+        ax1.set_xlabel("Data")
+        ax1.set_ylabel("Nº de Eventos")
+        st.pyplot(fig1)
+
+    with fig_col2:
+        st.subheader("Mortes por Mês")
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
+        sns.lineplot(data=mortes_mes, x="month_year", y="total_mortes", ax=ax2)
+        ax2.set_xlabel("Data")
+        ax2.set_ylabel("Nº de Mortes")
+        st.pyplot(fig2)
+
+    # --------------------------
+    # MAPA GEOGRÁFICO
+    # --------------------------
+    st.header("Mapa de Ocorrências no Brasil")
+
+    df_map = df.dropna(subset=["latitude", "longitude"])
+
+    fig_map = px.scatter_mapbox(
+        df_map,
+        lat="latitude",
+        lon="longitude",
+        hover_name="adm_1",
+        hover_data={"best_est": True, "date_start": True},
+        zoom=3,
+        height=600
     )
-    st.plotly_chart(fig_bar, use_container_width=True)
+
+    fig_map.update_layout(mapbox_style="open-street-map")
+    fig_map.update_layout(margin={"r":0, "t":0, "l":0, "b":0})
+
+    st.plotly_chart(fig_map, use_container_width=True)
+
+    # --------------------------
+    # DADOS BRUTOS
+    # --------------------------
+    if st.checkbox("Mostrar dados brutos"):
+        st.dataframe(df)
+
 else:
-    st.error("A coluna 'type' não existe no dataset.")
-
-# Mapa
-st.subheader("Mapa das ocorrências")
-
-fig_map = px.scatter_mapbox(
-    df_filtrado,
-    lat="latitude",
-    lon="longitude",
-    color="fatalities",
-    size="fatalities",
-    hover_name="location",
-    zoom=3,
-    height=600,
-)
-
-fig_map.update_layout(mapbox_style="open-street-map")
-st.plotly_chart(fig_map, use_container_width=True)
+    st.error("Erro ao carregar os dados.")
