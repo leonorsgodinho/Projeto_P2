@@ -35,7 +35,8 @@ def load_data(file_path):
 
         # Mortes (best_est)
         df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
-
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        
         # Shift all columns to the right after `where_coordinates` for all rows,
         # by inserting a temporary blank column at the end and moving values.
         if "where_coordinates" in df.columns:
@@ -92,15 +93,14 @@ if df is not None:
     # ==========================
 
     st.sidebar.header("Filtros")
-    
-    anos = sorted(df["year"].dropna().unique())
+
+    anos_disponiveis = sorted(df["year"].dropna().unique()) 
     tipos_violencia = sorted(df["type_of_violence"].dropna().unique())
     regioes = sorted(df["adm_1"].dropna().unique())
     
-    ano_escolhido = st.sidebar.multiselect(
-        "Selecionar Ano",
-        anos,
-        default=anos
+    ano_selecionado = st.sidebar.selectbox(
+        "Selecione o ano",
+        options=anos_disponiveis
     )
     
     tipo_escolhido = st.sidebar.multiselect(
@@ -117,7 +117,7 @@ if df is not None:
     
     # Aplicar filtros
     df_filtrado = df[
-        (df["year"].isin(ano_escolhido)) &
+        (df["year"] == ano_selecionado].copy() &
         (df["type_of_violence"].isin(tipo_escolhido)) &
         (df["adm_1"].isin(regiao_escolhida))
     ]
