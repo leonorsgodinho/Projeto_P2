@@ -157,11 +157,3 @@ if df is not None:
 
     st.plotly_chart(fig_map, width='stretch')
 
-    # --------------------------
-    # DADOS BRUTOS
-    # --------------------------
-    if st.checkbox("Mostrar dados brutos"):
-        st.dataframe(df)
-
-else:
-    st.error("Erro ao carregar os dados.")
