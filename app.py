@@ -87,11 +87,48 @@ df = load_data("brazil_conflicts_dataset.csv")
 
 if df is not None:
 
+    # ==========================
+    # SIDEBAR – FILTROS
+    # ==========================
+
+    st.sidebar.header("Filtros")
+    
+    anos = sorted(df["year"].dropna().unique())
+    tipos_violencia = sorted(df["type_of_violence"].dropna().unique())
+    regioes = sorted(df["adm_1"].dropna().unique())
+    
+    ano_escolhido = st.sidebar.multiselect(
+        "Selecionar Ano",
+        anos,
+        default=anos
+    )
+    
+    tipo_escolhido = st.sidebar.multiselect(
+        "Tipo de Violência",
+        tipos_violencia,
+        default=tipos_violencia
+    )
+    
+    regiao_escolhida = st.sidebar.multiselect(
+        "Região (Estado)",
+        regioes,
+        default=regioes
+    )
+    
+    # Aplicar filtros
+    df_filtrado = df[
+        (df["year"].isin(ano_escolhido)) &
+        (df["type_of_violence"].isin(tipo_escolhido)) &
+        (df["adm_1"].isin(regiao_escolhida))
+    ]
+    
+    st.success(f"{len(df_filtrado):,} eventos após filtros")
+        
     st.title("Dashboard: Conflitos Armados no Brasil")
 
     # KPIs gerais
-    total_eventos = len(df)
-    total_mortes = int(df["best_est"].sum())
+    total_eventos = len(df_filtrado)
+    total_mortes = int(df_filtrado["best_est"].sum())
 
     col1, col2 = st.columns(2)
     col1.metric("Total de Eventos", f"{total_eventos:,}")
@@ -103,10 +140,10 @@ if df is not None:
 
     st.header("Análise Temporal")
 
-    eventos_mes = df.groupby("month_year").size().reset_index(name="total_eventos")
+    eventos_mes = df_filtrado.groupby("month_year").size().reset_index(name="total_eventos")
     eventos_mes["month_year"] = eventos_mes["month_year"].dt.to_timestamp()
 
-    mortes_mes = df.groupby("month_year")["best_est"].sum().reset_index(name="total_mortes")
+    mortes_mes = df_filtrado.groupby("month_year")["best_est"].sum().reset_index(name="total_mortes")
     mortes_mes["month_year"] = mortes_mes["month_year"].dt.to_timestamp()
 
     fig_col1, fig_col2 = st.columns(2)
@@ -133,7 +170,7 @@ if df is not None:
     st.header("Mapa de Ocorrências no Brasil")
 
     # Diagnóstico do mapa
-    df_map = df.dropna(subset=["latitude", "longitude"]).copy()
+    df_map = df_filtrado.dropna(subset=["latitude", "longitude"]).copy()
     lat = pd.to_numeric(df_map["latitude"], errors="coerce")
     lon = pd.to_numeric(df_map["longitude"], errors="coerce")
     st.write(f"Pontos para map: {len(df_map)}")
