@@ -10,10 +10,11 @@ sns.set_style("whitegrid")
 @st.cache_data
 def load_data(file_path):
     try:
+        # Read as strings first to avoid column-shift from malformed rows; be permissive with quotes
         df = pd.read_csv(
             file_path,
             sep=",",
-            encoding="latin1",          
+            encoding="latin1",
             engine="python",
             on_bad_lines="skip"
         )        
@@ -22,8 +23,11 @@ def load_data(file_path):
         # Limpeza básica
         df.columns = df.columns.str.strip()
 
-        # Datas
-        df["date_start"] = pd.to_datetime(df["date_start"], errors="coerce")
+        # Datas: attempt flexible parsing (try dayfirst False, then True)
+        parsed = pd.to_datetime(df["date_start"], errors="coerce", dayfirst=False)
+        if parsed.isna().all():
+            parsed = pd.to_datetime(df["date_start"], errors="coerce", dayfirst=True)
+        df["date_start"] = parsed
 
         # Coordenadas
         df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
@@ -32,11 +36,45 @@ def load_data(file_path):
         # Mortes (best_est)
         df["best_est"] = pd.to_numeric(df["best_est"], errors="coerce")
 
-        # Remove linhas essenciais nulas
-        df = df.dropna(subset=["date_start", "latitude", "longitude"])
+        # Shift all columns to the right after `where_coordinates` for all rows,
+        # by inserting a temporary blank column at the end and moving values.
+        if "where_coordinates" in df.columns:
+            cols = list(df.columns)
+            idx = cols.index("where_coordinates")
+            # create a unique temporary column name
+            tmp = "__shift_tmp__"
+            while tmp in df.columns:
+                tmp += "_"
+            df[tmp] = None
 
-        # Criação da coluna mês-ano
-        df["month_year"] = df["date_start"].dt.to_period("M")
+            # refresh cols now that tmp exists
+            cols = list(df.columns)
+            # shift values one column to the right for all columns after idx
+            for j in range(len(cols) - 1, idx, -1):
+                df[cols[j]] = df[cols[j - 1]]
+
+            # set the original where_coordinates column to None (cleared)
+            df[cols[idx]] = None
+
+            # remove the temporary column
+            df = df.drop(columns=[tmp])
+
+        # Criação da coluna mês-ano (só quando date_start é datetimelike)
+        try:
+            if pd.api.types.is_datetime64_any_dtype(df["date_start"]):
+                df["month_year"] = df["date_start"].dt.to_period("M")
+            else:
+                # attempt a final coercion
+                parsed_final = pd.to_datetime(df["date_start"], errors="coerce")
+                if pd.api.types.is_datetime64_any_dtype(parsed_final):
+                    df["date_start"] = parsed_final
+                    df["month_year"] = parsed_final.dt.to_period("M")
+                else:
+                    df["month_year"] = pd.NaT
+                    st.warning("Algumas datas não foram parseadas para datetime; 'month_year' ficará vazio.")
+        except Exception as e:
+            df["month_year"] = pd.NaT
+            st.warning(f"Erro ao criar 'month_year': {e}")
 
         return df
 
@@ -94,9 +132,17 @@ if df is not None:
     # --------------------------
     st.header("Mapa de Ocorrências no Brasil")
 
-    df_map = df.dropna(subset=["latitude", "longitude"])
+    # Diagnóstico do mapa
+    df_map = df.dropna(subset=["latitude", "longitude"]).copy()
+    lat = pd.to_numeric(df_map["latitude"], errors="coerce")
+    lon = pd.to_numeric(df_map["longitude"], errors="coerce")
+    st.write(f"Pontos para map: {len(df_map)}")
+    if len(df_map) > 0:
+        st.write(f"Latitude min/max: {lat.min()} / {lat.max()}")
+        st.write(f"Longitude min/max: {lon.min()} / {lon.max()}")
 
-    fig_map = px.scatter_mapbox(
+    # Use scatter_map which is the modern Plotly API (mapbox backend handled internally)
+    fig_map = px.scatter_map(
         df_map,
         lat="latitude",
         lon="longitude",
@@ -109,7 +155,7 @@ if df is not None:
     fig_map.update_layout(mapbox_style="open-street-map")
     fig_map.update_layout(margin={"r":0, "t":0, "l":0, "b":0})
 
-    st.plotly_chart(fig_map, use_container_width=True)
+    st.plotly_chart(fig_map, width='stretch')
 
     # --------------------------
     # DADOS BRUTOS
