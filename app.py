@@ -112,11 +112,11 @@ if df is not None:
 
     # KPIs gerais
     total_eventos = len(df_filtrado)
-    total_mortes = int(df_filtrado)
+    total_mortes = int(df_filtrado["best_est"].sum())
 
     col1, col2 = st.columns(2)
     col1.metric("Total de Eventos", f"{total_eventos:,}")
-    col2.metric("Total de Mortes (best_est)", f"{total_mortes:,}")
+    col2.metric("Total de Mortes", f"{total_mortes:,}")
 
     # --------------------------
     # GRÁFICOS 
