@@ -148,6 +148,23 @@ if df is not None:
         ax2.set_ylabel("Nº de Mortes")
         st.pyplot(fig2)
 
+    st.header("Top 10 Estados com Mais Mortes")
+
+    top_estados = (
+        df_filtrado.groupby("adm_1")["best_est"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
+    
+    fig, ax = plt.subplots(figsize=(8,5))
+    sns.barplot(data=top_estados, x="best_est", y="adm_1", ax=ax)
+    ax.set_xlabel("Total de Mortes (best_est)")
+    ax.set_ylabel("Estado")
+    st.pyplot(fig)
+
+    
     # --------------------------
     # MAPA GEOGRÁFICO
     # --------------------------
