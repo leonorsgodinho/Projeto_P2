@@ -164,25 +164,40 @@ if df is not None:
     ax.set_ylabel("Estado")
     st.pyplot(fig)
 
-    st.header("Grupos Mais Envolvidos em Conflitos")
-    
-    grupos = (
-    df["side_a"]
-    .dropna()
-    .replace("", "Desconhecido")
-    .value_counts()
-    .head(15)   # top 15 grupos para evitar milhares de categorias pequenas
-    )
+    st.subheader("Grupos mais envolvidos")
 
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.pie(
-        grupos.values,
-        labels=grupos.index,
-        autopct="%1.1f%%",
-        startangle=90,
+    s_a = df["side_a"].astype(str).str.strip().replace({"nan": None, "None": None, "": None})
+    s_b = df["side_b"].astype(str).str.strip().replace({"nan": None, "None": None, "": None})
+    
+    combined = pd.concat([s_a, s_b]).dropna()
+    
+    # Conta e agrega top N
+    top_n = 12
+    counts = combined.value_counts()
+    top = counts.head(top_n)
+    others_count = counts.iloc[top_n:].sum()
+    
+    # Cria DataFrame para o gráfico
+    pie_df = top.reset_index()
+    pie_df.columns = ["grupo", "ocorrencias"]
+    if others_count > 0:
+        pie_df = pie_df.append({"grupo": "Outros", "ocorrencias": int(others_count)}, ignore_index=True)
+    
+    # Pie chart com Plotly (legenda + hover)
+    fig = px.pie(
+        pie_df,
+        names="grupo",
+        values="ocorrencias",
+        title=f"Top {top_n} grupos mais envolvidos (Side A + Side B)",
+        hole=0.35
     )
-    ax.set_title("Participação dos grupos em conflitos (Side A)")
-    st.pyplot(fig)
+    
+    # Mostrar rótulos também na fatia e na legenda
+    fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate='%{label}: %{value} ocorrências (%{percent})')
+    fig.update_layout(legend=dict(orientation="v", xanchor="left", x=1.02))
+    
+    st.plotly_chart(fig, use_container_width=True)
+
 
     # --------------------------
     # MAPA GEOGRÁFICO
