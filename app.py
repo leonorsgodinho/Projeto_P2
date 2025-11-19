@@ -112,7 +112,7 @@ if df is not None:
 
     # KPIs gerais
     total_eventos = len(df_filtrado)
-    total_mortes = int(df_filtrado["best_est"].sum())
+    total_mortes = int(df_filtrado)
 
     col1, col2 = st.columns(2)
     col1.metric("Total de Eventos", f"{total_eventos:,}")
@@ -133,7 +133,7 @@ if df is not None:
     fig_col1, fig_col2 = st.columns(2)
 
     with fig_col1:
-        st.subheader("Eventos por Mês")
+        st.subheader("Eventos por ano")
         fig1, ax1 = plt.subplots(figsize=(10, 4))
         sns.lineplot(data=eventos_mes, x="month_year", y="total_eventos", ax=ax1)
         ax1.set_xlabel("Data")
@@ -141,7 +141,7 @@ if df is not None:
         st.pyplot(fig1)
 
     with fig_col2:
-        st.subheader("Mortes por Mês")
+        st.subheader("Mortes por ano")
         fig2, ax2 = plt.subplots(figsize=(10, 4))
         sns.lineplot(data=mortes_mes, x="month_year", y="total_mortes", ax=ax2)
         ax2.set_xlabel("Data")
