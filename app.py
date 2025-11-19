@@ -166,20 +166,23 @@ if df is not None:
 
     st.header("Grupos Mais Envolvidos em Conflitos")
     
-    grupos = df["dyad_name"].dropna()
-    
-    contagem = grupos.value_counts().reset_index()
-    contagem.columns = ["grupo", "ocorrencias"]
-    
-    fig = px.pie(
-        contagem,
-        names="grupo",
-        values="ocorrencias",
-        title="Grupos mais envolvidos em conflitos",
-        hole=0.3
+    grupos = (
+    df["side_a"]
+    .dropna()
+    .replace("", "Desconhecido")
+    .value_counts()
+    .head(15)   # top 15 grupos para evitar milhares de categorias pequenas
     )
-    
-    st.plotly_chart(fig)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.pie(
+        grupos.values,
+        labels=grupos.index,
+        autopct="%1.1f%%",
+        startangle=90,
+    )
+    ax.set_title("Participação dos grupos em conflitos (Side A)")
+    st.pyplot(fig)
 
     # --------------------------
     # MAPA GEOGRÁFICO
