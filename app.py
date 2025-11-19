@@ -164,7 +164,23 @@ if df is not None:
     ax.set_ylabel("Estado")
     st.pyplot(fig)
 
+    st.header("Grupos Mais Envolvidos em Conflitos")
     
+    sides = pd.concat([df_filtrado["side_a"], df_filtrado["side_b"]]).dropna()
+    
+    contagem = sides.value_counts().reset_index()
+    contagem.columns = ["grupo", "ocorrencias"]
+    
+    fig = px.pie(
+        contagem,
+        names="grupo",
+        values="ocorrencias",
+        title="Grupos mais envolvidos em conflitos (Side A + Side B)",
+        hole=0.3
+    )
+    
+    st.plotly_chart(fig)
+
     # --------------------------
     # MAPA GEOGRÁFICO
     # --------------------------
