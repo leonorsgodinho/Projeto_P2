@@ -117,7 +117,7 @@ if df is not None:
     
     # Aplicar filtros
     df_filtrado = df[
-        (df["year"] == ano_selecionado].copy() &
+        (df["year"] == ano_selecionado).copy() &
         (df["type_of_violence"].isin(tipo_escolhido)) &
         (df["adm_1"].isin(regiao_escolhida))
     ]
