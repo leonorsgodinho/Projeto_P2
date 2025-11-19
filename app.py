@@ -119,7 +119,7 @@ if df is not None:
     col2.metric("Total de Mortes (best_est)", f"{total_mortes:,}")
 
     # --------------------------
-    # GRÁFICOS TEMPORAIS
+    # GRÁFICOS 
     # --------------------------
 
     st.header("Análise Temporal")
@@ -166,16 +166,16 @@ if df is not None:
 
     st.header("Grupos Mais Envolvidos em Conflitos")
     
-    sides = pd.concat([df_filtrado["side_a"], df_filtrado["side_b"]]).dropna()
+    grupos = df["dyad_name"].dropna()
     
-    contagem = sides.value_counts().reset_index()
+    contagem = grupos.value_counts().reset_index()
     contagem.columns = ["grupo", "ocorrencias"]
     
     fig = px.pie(
         contagem,
         names="grupo",
         values="ocorrencias",
-        title="Grupos mais envolvidos em conflitos (Side A + Side B)",
+        title="Grupos mais envolvidos em conflitos",
         hole=0.3
     )
     
